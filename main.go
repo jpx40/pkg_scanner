@@ -24,7 +24,8 @@ type pkg struct {
 
 func main() {
 	t0 := time.Now()
-	read_packages()
+	p := read_packages()
+	manage_db(p)
 	t1 := time.Now()
 	fmt.Printf("The call took %v to run.\n", t1.Sub(t0))
 }
@@ -48,7 +49,7 @@ func read_packages() []pkg {
 	var pkgs []pkg
 
 	// i := 0
-	db := db_connect()
+	// db := db_connect()
 
 	for _, pkg_tmp := range s {
 
@@ -60,8 +61,8 @@ func read_packages() []pkg {
 			panic(err)
 		}
 
-		Insert(db, pkg{name: pkg_tmp, version: version, dependencies: depends})
-		// pkgs = append(pkgs, pkg{name: pkg_tmp, version: version, depends: depends})
+		// Insert(db, pkg{name: pkg_tmp, version: version, dependencies: depends})
+		pkgs = append(pkgs, pkg{name: pkg_tmp, version: version, dependencies: depends})
 		// i++
 		// if i > 10 {
 		// 	break
@@ -69,6 +70,30 @@ func read_packages() []pkg {
 	}
 
 	return pkgs
+}
+
+func build_insert(p []pkg) string {
+	l := []string{}
+	var s string
+	for _, pkg_tmp := range p {
+		var tmp string = fmt.Sprintf("('%s','%s','%s')", pkg_tmp.name, pkg_tmp.version, pkg_tmp.dependencies)
+		l = append(l, tmp)
+	}
+	s = strings.Join(l, ",")
+	fmt.Printf(s, "\n")
+
+	return s
+}
+
+func manage_db(p []pkg) {
+	db := db_connect()
+	// s := build_insert(p)
+	fmt.Println("Executing INSERT ")
+
+	// insert into database
+	for _, pkg_tmp := range p {
+		Insert(db, pkg_tmp)
+	}
 }
 
 func get_version(pkg_tmp string) string {
@@ -126,11 +151,8 @@ func db_connect() *sql.DB {
 }
 
 // insert
-func Insert(c *sql.DB, d pkg) {
-	name := d.name
-	version := d.version
-	dependencies := to_json(d.dependencies)
-	_, err := c.Exec("INSERT INTO arch_packages (name, version, dependencies) VALUES ($1, $2, $3)", name, version, dependencies)
+func Insert(c *sql.DB, p pkg) {
+	_, err := c.Exec("INSERT INTO arch_packages (name, version, dependencies) VALUES ($1, $2, $3)", p.name, p.version, p.dependencies)
 	if err != nil {
 		panic("error inserting data: " + err.Error())
 	}
